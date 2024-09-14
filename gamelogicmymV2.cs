@@ -17,7 +17,7 @@ public class GameLogicMym : MonoBehaviour
     private int playerHealth = 200;
     private const int playerMaxHealth = 200;
     private const int playerDamage = 1;
-    private const int enemyHealthBase = 100;
+    private const int enemyHealthBase = 10;
     private int currentEnemyHealth;
 
     // Cooldown between damage ticks (1 second)
