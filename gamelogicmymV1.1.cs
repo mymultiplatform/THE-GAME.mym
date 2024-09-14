@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-public class gamelogicmym : MonoBehaviour
+public class GameLogicMym : MonoBehaviour
 {
     // Public references for the player cube (Player "P")
     public GameObject playerCube;
@@ -19,6 +19,10 @@ public class gamelogicmym : MonoBehaviour
     private const int playerDamage = 1;
     private const int enemyHealthBase = 100;
     private int currentEnemyHealth;
+
+    // Cooldown between damage ticks (1 second)
+    private float damageCooldown = 1.0f;
+    private float lastDamageTime;
 
     // Distance threshold for brute-force collision detection
     public float collisionDistanceThreshold = 1.5f;
@@ -52,20 +56,27 @@ public class gamelogicmym : MonoBehaviour
     {
         if (currentEnemy != null && Vector3.Distance(playerCube.transform.position, currentEnemy.transform.position) < collisionDistanceThreshold && !isEnemyDestroyed)
         {
-            // Apply damage to the enemy and player
-            ApplyDamageToEnemy();
-            ApplyDamageToPlayer();
-
-            // Check if the enemy is destroyed
-            if (currentEnemyHealth <= 0)
+            // Apply damage if cooldown has passed
+            if (Time.time - lastDamageTime >= damageCooldown)
             {
-                Destroy(currentEnemy);
-                Debug.Log($"Enemy {GetLabelForCurrentLevel()} destroyed.");
+                // Apply damage to the enemy and player
+                ApplyDamageToEnemy();
+                ApplyDamageToPlayer();
 
-                // Set NPC visible now that the enemy is destroyed
-                currentNPC.SetActive(true);
-                AttachDebugLetter(currentNPC, GetLabelForCurrentLevel());
-                isEnemyDestroyed = true;
+                // Check if the enemy is destroyed
+                if (currentEnemyHealth <= 0)
+                {
+                    Destroy(currentEnemy);
+                    Debug.Log($"Enemy {GetLabelForCurrentLevel()} destroyed.");
+
+                    // Set NPC visible now that the enemy is destroyed
+                    currentNPC.SetActive(true);
+                    AttachDebugLetter(currentNPC, GetLabelForCurrentLevel());
+                    isEnemyDestroyed = true;
+                }
+
+                // Update last damage time
+                lastDamageTime = Time.time;
             }
         }
 
@@ -228,6 +239,9 @@ public class gamelogicmym : MonoBehaviour
         // Activate the current enemy for the level
         currentEnemy.SetActive(true);
         AttachDebugLetter(currentEnemy, GetLabelForCurrentLevel());
+
+        // Reset last damage time so the player can deal damage as soon as a level starts
+        lastDamageTime = Time.time;
     }
 
     // Function to get the label for the current level (A, B, C, D, or E)
