@@ -37,15 +37,26 @@ public class GameLogicMym : MonoBehaviour
     private GameObject currentEnemy;
     private GameObject currentNPC;
 
+    // Multiple enemies spawn array
+    private GameObject[] additionalEnemies;
+    private const int extraEnemiesCount = 2; // Number of extra enemies to spawn
+
     // Current level and total levels
     private int currentLevel = 1;
     private const int totalLevels = 5;
 
+    // Enemy follow speed
+    public float enemyFollowSpeed = 2.0f;
+
     // This function will be called at the start of the game
     void Start()
     {
+        // Hide all enemies and NPCs at the start
+        HideAllEnemiesAndNPCs();
+
         // Initialize the first level
         StartLevel(1);
+
         // Attach the player label "P"
         AttachDebugLetter(playerCube, "P");
         Debug.Log("Starting game logic with level progression.");
@@ -54,20 +65,47 @@ public class GameLogicMym : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Handle enemy following logic
+        if (currentEnemy != null && !isEnemyDestroyed)
+        {
+            FollowPlayer(currentEnemy); // Original enemy follows
+        }
+
+        // Handle additional enemies following
+        if (additionalEnemies != null)
+        {
+            foreach (GameObject extraEnemy in additionalEnemies)
+            {
+                if (extraEnemy != null && !isEnemyDestroyed)
+                {
+                    FollowPlayer(extraEnemy); // Additional enemies follow
+                }
+            }
+        }
+
+        // Check for collisions and handle enemy destruction
         if (currentEnemy != null && Vector3.Distance(playerCube.transform.position, currentEnemy.transform.position) < collisionDistanceThreshold && !isEnemyDestroyed)
         {
             // Apply damage if cooldown has passed
             if (Time.time - lastDamageTime >= damageCooldown)
             {
-                // Apply damage to the enemy and player
                 ApplyDamageToEnemy();
                 ApplyDamageToPlayer();
 
-                // Check if the enemy is destroyed
+                // Check if the original enemy is destroyed
                 if (currentEnemyHealth <= 0)
                 {
                     Destroy(currentEnemy);
                     Debug.Log($"Enemy {GetLabelForCurrentLevel()} destroyed.");
+
+                    // Destroy additional enemies too
+                    foreach (GameObject extraEnemy in additionalEnemies)
+                    {
+                        if (extraEnemy != null)
+                        {
+                            Destroy(extraEnemy);
+                        }
+                    }
 
                     // Set NPC visible now that the enemy is destroyed
                     currentNPC.SetActive(true);
@@ -80,16 +118,22 @@ public class GameLogicMym : MonoBehaviour
             }
         }
 
+        // Show NPC dialogue when the player reaches the NPC
         if (isEnemyDestroyed && !isDialogueShown && Vector3.Distance(playerCube.transform.position, currentNPC.transform.position) < collisionDistanceThreshold)
         {
-            // Show NPC dialogue
             ShowNPCDialogue(GetLabelForCurrentLevel());
             isDialogueShown = true;
             Debug.Log($"NPC {GetLabelForCurrentLevel()} dialogue displayed.");
-
-            // Start coroutine to transition to the next level
             StartCoroutine(TransitionToNextLevel());
         }
+    }
+
+    // Function to follow the player
+    void FollowPlayer(GameObject enemy)
+    {
+        // Calculate the direction towards the playerCube and move the enemy
+        Vector3 direction = (playerCube.transform.position - enemy.transform.position).normalized;
+        enemy.transform.position += direction * enemyFollowSpeed * Time.deltaTime;
     }
 
     // Function to apply damage to the enemy
@@ -109,7 +153,6 @@ public class GameLogicMym : MonoBehaviour
 
         Debug.Log($"Player takes 1 damage. Health now: {playerHealth}");
 
-        // Reset player health for debugging purposes
         if (playerHealth <= 0)
         {
             Debug.Log("Player health reached 0. Resetting to full health for debugging.");
@@ -120,39 +163,30 @@ public class GameLogicMym : MonoBehaviour
     // Function to display floating damage numbers
     void DisplayDamageNumber(GameObject targetObject, int damageAmount)
     {
-        // Create a new TextMesh object for the damage number
         GameObject damageTextObject = new GameObject("DamageText");
         TextMesh damageTextMesh = damageTextObject.AddComponent<TextMesh>();
 
-        // Set the damage text and configure appearance
         damageTextMesh.text = $"-{damageAmount}";
         damageTextMesh.fontSize = 32;
         damageTextMesh.color = Color.red;
 
-        // Position the damage number above the targetObject
         damageTextObject.transform.position = targetObject.transform.position + new Vector3(0, 2, 0);
-
-        // Make the damage text disappear after a short time
         Destroy(damageTextObject, 1.0f);
     }
 
     // Function to attach a letter above the assigned object for debugging
     void AttachDebugLetter(GameObject targetObject, string label)
     {
-        // Create a new TextMesh object for the label
         GameObject labelObject = new GameObject("DebugLabel");
         TextMesh textMesh = labelObject.AddComponent<TextMesh>();
 
-        // Set the text to the specified label and configure appearance
         textMesh.text = label;
         textMesh.fontSize = 32;
         textMesh.color = Color.red;
 
-        // Position the label slightly above the targetObject
-        labelObject.transform.position = targetObject.transform.position + new Vector3(0, 2, 0); // Adjust height here
-        labelObject.transform.SetParent(targetObject.transform); // Ensure the label follows the object
+        labelObject.transform.position = targetObject.transform.position + new Vector3(0, 2, 0);
+        labelObject.transform.SetParent(targetObject.transform);
 
-        // Save the label for the NPC so we can add dialogue later
         if (targetObject == currentNPC)
         {
             currentNpcLabel = labelObject;
@@ -162,33 +196,27 @@ public class GameLogicMym : MonoBehaviour
     // Function to show NPC dialogue when player collides with NPC
     void ShowNPCDialogue(string label)
     {
-        // Create a new TextMesh object for the dialogue text
         GameObject dialogueObject = new GameObject("NPCDialogue");
         dialogueTextMesh = dialogueObject.AddComponent<TextMesh>();
 
-        // Set the dialogue text and configure appearance
         dialogueTextMesh.text = $"Thank you for destroying the enemy {label}";
         dialogueTextMesh.fontSize = 24;
         dialogueTextMesh.color = Color.white;
 
-        // Position the dialogue next to the label above the NPC
-        dialogueObject.transform.position = currentNpcLabel.transform.position + new Vector3(1.5f, 0, 0); // Adjust position here
-        dialogueObject.transform.SetParent(currentNPC.transform); // Ensure the dialogue follows the NPC
+        dialogueObject.transform.position = currentNpcLabel.transform.position + new Vector3(1.5f, 0, 0);
+        dialogueObject.transform.SetParent(currentNPC.transform);
     }
 
     // Coroutine to handle transition to the next level
     IEnumerator TransitionToNextLevel()
     {
-        // Wait for 10 seconds after showing dialogue
         yield return new WaitForSeconds(10);
 
-        // Clear the current dialogue
         if (dialogueTextMesh != null)
         {
             Destroy(dialogueTextMesh.gameObject);
         }
 
-        // Increment to the next level, or finish the game if the final level is completed
         if (currentLevel < totalLevels)
         {
             currentLevel++;
@@ -236,12 +264,45 @@ public class GameLogicMym : MonoBehaviour
         currentEnemyHealth = enemyHealthBase;
         currentNPC.SetActive(false);
 
+        // Spawn additional enemies
+        SpawnAdditionalEnemies();
+
         // Activate the current enemy for the level
         currentEnemy.SetActive(true);
         AttachDebugLetter(currentEnemy, GetLabelForCurrentLevel());
 
-        // Reset last damage time so the player can deal damage as soon as a level starts
         lastDamageTime = Time.time;
+    }
+
+    // Function to spawn additional enemies
+    void SpawnAdditionalEnemies()
+    {
+        additionalEnemies = new GameObject[extraEnemiesCount];
+
+        for (int i = 0; i < extraEnemiesCount; i++)
+        {
+            // Create extra enemies based on the original enemy's position
+            Vector3 spawnPosition = currentEnemy.transform.position + new Vector3(i + 2, 0, i + 2); // Simple offset
+            additionalEnemies[i] = Instantiate(currentEnemy, spawnPosition, Quaternion.identity);
+
+            // Remove debug labels for the additional enemies (only original has a label)
+            Destroy(additionalEnemies[i].GetComponentInChildren<TextMesh>());
+        }
+    }
+
+    // Function to hide all enemies and NPCs at the start of the game
+    void HideAllEnemiesAndNPCs()
+    {
+        enemyCapsuleA.SetActive(false);
+        npcCylinderA.SetActive(false);
+        enemyCapsuleB.SetActive(false);
+        npcCylinderB.SetActive(false);
+        enemyCapsuleC.SetActive(false);
+        npcCylinderC.SetActive(false);
+        enemyCapsuleD.SetActive(false);
+        npcCylinderD.SetActive(false);
+        enemyCapsuleE.SetActive(false);
+        npcCylinderE.SetActive(false);
     }
 
     // Function to get the label for the current level (A, B, C, D, or E)
