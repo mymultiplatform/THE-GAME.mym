@@ -13,6 +13,13 @@ public class GameLogicMym : MonoBehaviour
     public GameObject enemyCapsuleD, npcCylinderD;
     public GameObject enemyCapsuleE, npcCylinderE;
 
+    // Additional enemies for each level
+    public GameObject enemyCapsuleAExtra1, enemyCapsuleAExtra2;
+    public GameObject enemyCapsuleBExtra1, enemyCapsuleBExtra2;
+    public GameObject enemyCapsuleCExtra1, enemyCapsuleCExtra2;
+    public GameObject enemyCapsuleDExtra1, enemyCapsuleDExtra2;
+    public GameObject enemyCapsuleEExtra1, enemyCapsuleEExtra2;
+
     // Health and damage values
     private int playerHealth = 200;
     private const int playerMaxHealth = 200;
@@ -37,9 +44,8 @@ public class GameLogicMym : MonoBehaviour
     private GameObject currentEnemy;
     private GameObject currentNPC;
 
-    // Multiple enemies spawn array
-    private GameObject[] additionalEnemies;
-    private const int extraEnemiesCount = 2; // Number of extra enemies to spawn
+    // References for the additional enemies of the current level
+    private GameObject extraEnemy1, extraEnemy2;
 
     // Current level and total levels
     private int currentLevel = 1;
@@ -65,22 +71,20 @@ public class GameLogicMym : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Handle enemy following logic
+        // Handle enemy following logic for main and extra enemies
         if (currentEnemy != null && !isEnemyDestroyed)
         {
             FollowPlayer(currentEnemy); // Original enemy follows
         }
 
-        // Handle additional enemies following
-        if (additionalEnemies != null)
+        if (extraEnemy1 != null && !isEnemyDestroyed)
         {
-            foreach (GameObject extraEnemy in additionalEnemies)
-            {
-                if (extraEnemy != null && !isEnemyDestroyed)
-                {
-                    FollowPlayer(extraEnemy); // Additional enemies follow
-                }
-            }
+            FollowPlayer(extraEnemy1); // Extra enemy 1 follows
+        }
+
+        if (extraEnemy2 != null && !isEnemyDestroyed)
+        {
+            FollowPlayer(extraEnemy2); // Extra enemy 2 follows
         }
 
         // Check for collisions and handle enemy destruction
@@ -96,18 +100,11 @@ public class GameLogicMym : MonoBehaviour
                 if (currentEnemyHealth <= 0)
                 {
                     Destroy(currentEnemy);
-                    Debug.Log($"Enemy {GetLabelForCurrentLevel()} destroyed.");
+                    Destroy(extraEnemy1);
+                    Destroy(extraEnemy2);
+                    Debug.Log($"Enemy {GetLabelForCurrentLevel()} and its extras destroyed.");
 
-                    // Destroy additional enemies too
-                    foreach (GameObject extraEnemy in additionalEnemies)
-                    {
-                        if (extraEnemy != null)
-                        {
-                            Destroy(extraEnemy);
-                        }
-                    }
-
-                    // Set NPC visible now that the enemy is destroyed
+                    // Set NPC visible now that the enemies are destroyed
                     currentNPC.SetActive(true);
                     AttachDebugLetter(currentNPC, GetLabelForCurrentLevel());
                     isEnemyDestroyed = true;
@@ -241,22 +238,32 @@ public class GameLogicMym : MonoBehaviour
             case 1:
                 currentEnemy = enemyCapsuleA;
                 currentNPC = npcCylinderA;
+                extraEnemy1 = enemyCapsuleAExtra1;
+                extraEnemy2 = enemyCapsuleAExtra2;
                 break;
             case 2:
                 currentEnemy = enemyCapsuleB;
                 currentNPC = npcCylinderB;
+                extraEnemy1 = enemyCapsuleBExtra1;
+                extraEnemy2 = enemyCapsuleBExtra2;
                 break;
             case 3:
                 currentEnemy = enemyCapsuleC;
                 currentNPC = npcCylinderC;
+                extraEnemy1 = enemyCapsuleCExtra1;
+                extraEnemy2 = enemyCapsuleCExtra2;
                 break;
             case 4:
                 currentEnemy = enemyCapsuleD;
                 currentNPC = npcCylinderD;
+                extraEnemy1 = enemyCapsuleDExtra1;
+                extraEnemy2 = enemyCapsuleDExtra2;
                 break;
             case 5:
                 currentEnemy = enemyCapsuleE;
                 currentNPC = npcCylinderE;
+                extraEnemy1 = enemyCapsuleEExtra1;
+                extraEnemy2 = enemyCapsuleEExtra2;
                 break;
         }
 
@@ -264,30 +271,14 @@ public class GameLogicMym : MonoBehaviour
         currentEnemyHealth = enemyHealthBase;
         currentNPC.SetActive(false);
 
-        // Spawn additional enemies
-        SpawnAdditionalEnemies();
-
-        // Activate the current enemy for the level
+        // Activate the current enemy and additional enemies for the level
         currentEnemy.SetActive(true);
+        extraEnemy1.SetActive(true);
+        extraEnemy2.SetActive(true);
+
         AttachDebugLetter(currentEnemy, GetLabelForCurrentLevel());
 
         lastDamageTime = Time.time;
-    }
-
-    // Function to spawn additional enemies
-    void SpawnAdditionalEnemies()
-    {
-        additionalEnemies = new GameObject[extraEnemiesCount];
-
-        for (int i = 0; i < extraEnemiesCount; i++)
-        {
-            // Create extra enemies based on the original enemy's position
-            Vector3 spawnPosition = currentEnemy.transform.position + new Vector3(i + 2, 0, i + 2); // Simple offset
-            additionalEnemies[i] = Instantiate(currentEnemy, spawnPosition, Quaternion.identity);
-
-            // Remove debug labels for the additional enemies (only original has a label)
-            Destroy(additionalEnemies[i].GetComponentInChildren<TextMesh>());
-        }
     }
 
     // Function to hide all enemies and NPCs at the start of the game
@@ -303,6 +294,18 @@ public class GameLogicMym : MonoBehaviour
         npcCylinderD.SetActive(false);
         enemyCapsuleE.SetActive(false);
         npcCylinderE.SetActive(false);
+
+        // Hide all extra enemies
+        enemyCapsuleAExtra1.SetActive(false);
+        enemyCapsuleAExtra2.SetActive(false);
+        enemyCapsuleBExtra1.SetActive(false);
+        enemyCapsuleBExtra2.SetActive(false);
+        enemyCapsuleCExtra1.SetActive(false);
+        enemyCapsuleCExtra2.SetActive(false);
+        enemyCapsuleDExtra1.SetActive(false);
+        enemyCapsuleDExtra2.SetActive(false);
+        enemyCapsuleEExtra1.SetActive(false);
+        enemyCapsuleEExtra2.SetActive(false);
     }
 
     // Function to get the label for the current level (A, B, C, D, or E)
