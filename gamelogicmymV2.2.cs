@@ -53,6 +53,8 @@ public class GameLogicMym : MonoBehaviour
 
     // Enemy follow speed
     public float enemyFollowSpeed = 2.0f;
+    public float extraEnemyOffset = 1.0f;  // Offset for the extra enemies
+    public float extraEnemyFollowDelay = 0.5f;  // Delay in movement for extra enemies
 
     // This function will be called at the start of the game
     void Start()
@@ -79,12 +81,12 @@ public class GameLogicMym : MonoBehaviour
 
         if (extraEnemy1 != null && !isEnemyDestroyed)
         {
-            FollowPlayer(extraEnemy1); // Extra enemy 1 follows
+            FollowPlayerWithOffset(extraEnemy1, extraEnemyOffset, extraEnemyFollowDelay); // Extra enemy 1 follows with delay and offset
         }
 
         if (extraEnemy2 != null && !isEnemyDestroyed)
         {
-            FollowPlayer(extraEnemy2); // Extra enemy 2 follows
+            FollowPlayerWithOffset(extraEnemy2, -extraEnemyOffset, extraEnemyFollowDelay); // Extra enemy 2 follows with delay and opposite offset
         }
 
         // Check for collisions and handle enemy destruction
@@ -131,6 +133,23 @@ public class GameLogicMym : MonoBehaviour
         // Calculate the direction towards the playerCube and move the enemy
         Vector3 direction = (playerCube.transform.position - enemy.transform.position).normalized;
         enemy.transform.position += direction * enemyFollowSpeed * Time.deltaTime;
+    }
+
+    // Function to follow the player with an offset and delay for extra enemies
+    void FollowPlayerWithOffset(GameObject enemy, float offset, float delay)
+    {
+        // Wait for the delay before the extra enemy starts moving
+        StartCoroutine(FollowWithDelay(enemy, offset, delay));
+    }
+
+    IEnumerator FollowWithDelay(GameObject enemy, float offset, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        // Calculate the direction towards the playerCube and move the enemy with an offset
+        Vector3 direction = (playerCube.transform.position - enemy.transform.position).normalized;
+        Vector3 offsetPosition = new Vector3(direction.z, 0, -direction.x) * offset;  // Perpendicular offset
+        enemy.transform.position += (direction + offsetPosition) * enemyFollowSpeed * Time.deltaTime;
     }
 
     // Function to apply damage to the enemy
@@ -277,6 +296,8 @@ public class GameLogicMym : MonoBehaviour
         extraEnemy2.SetActive(true);
 
         AttachDebugLetter(currentEnemy, GetLabelForCurrentLevel());
+        AttachDebugLetter(extraEnemy1, GetLabelForCurrentLevel() + " Extra1");
+        AttachDebugLetter(extraEnemy2, GetLabelForCurrentLevel() + " Extra2");
 
         lastDamageTime = Time.time;
     }
