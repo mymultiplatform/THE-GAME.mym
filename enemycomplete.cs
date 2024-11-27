@@ -23,6 +23,10 @@ public class ProceduralSlime : MonoBehaviour
     public Color idleColor = Color.green;
     public Color chaseColor = Color.red;
 
+    [Header("Fluidity Settings")]
+    public float fluiditySpeed = 2f;
+    public float fluidityAmplitude = 0.1f;
+
     private Rigidbody rb;
     private Vector3 currentDirection;
     private float timer;
@@ -30,9 +34,16 @@ public class ProceduralSlime : MonoBehaviour
     private Transform playerTransform;
     private Renderer slimeRenderer;
 
+    private Mesh originalMesh;
+    private Vector3[] baseVertices;
+    private Vector3[] displacedVertices;
+    private float[] vertexOffsets;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        rb.useGravity = true; // Ensure gravity is enabled
+
         slimeRenderer = GetComponent<Renderer>();
 
         GenerateSlimeMesh();
@@ -55,6 +66,9 @@ public class ProceduralSlime : MonoBehaviour
     void Update()
     {
         timer += Time.deltaTime;
+
+        // Handle fluidity deformation
+        ApplyFluidity();
 
         // Check distance to player
         bool isPlayerNearby = false;
@@ -177,8 +191,39 @@ public class ProceduralSlime : MonoBehaviour
 
         mf.mesh = mesh;
 
+        // Store original mesh for deformation
+        originalMesh = mesh;
+        baseVertices = mesh.vertices.Clone() as Vector3[];
+        displacedVertices = new Vector3[baseVertices.Length];
+        System.Array.Copy(baseVertices, displacedVertices, baseVertices.Length);
+
+        // Initialize vertex offsets for fluidity
+        vertexOffsets = new float[baseVertices.Length];
+        for (int i = 0; i < vertexOffsets.Length; i++)
+        {
+            vertexOffsets[i] = Random.Range(0f, Mathf.PI * 2);
+        }
+
         // Add a spherical collider
         SphereCollider collider = gameObject.AddComponent<SphereCollider>();
         collider.radius = radius + noiseStrength;
+    }
+
+    void ApplyFluidity()
+    {
+        if (originalMesh == null || baseVertices == null || vertexOffsets == null)
+            return;
+
+        for (int i = 0; i < baseVertices.Length; i++)
+        {
+            Vector3 vertex = baseVertices[i];
+            float wave = Mathf.Sin(Time.time * fluiditySpeed + vertexOffsets[i]);
+            Vector3 displacement = Vector3.up * wave * fluidityAmplitude;
+            displacedVertices[i] = vertex + displacement;
+        }
+
+        originalMesh.vertices = displacedVertices;
+        originalMesh.RecalculateNormals();
+        GetComponent<MeshFilter>().mesh = originalMesh;
     }
 }
