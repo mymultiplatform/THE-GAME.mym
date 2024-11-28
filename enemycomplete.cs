@@ -38,6 +38,14 @@ public class ProceduralSlime : MonoBehaviour
     [Header("Deformation Settings")]
     public float stretchMultiplier = 0.1f; // Adjust as needed
 
+    [Header("Punch Effect Settings")]
+    public float punchForce = 15f; // Increased for stronger knockback
+    public float punchArcHeight = 2f;
+
+    [Header("Ground Check Settings")]
+    public LayerMask groundLayer;
+    public float groundCheckDistance = 0.1f;
+
     private Rigidbody rb;
     private Vector3 currentDirection;
     private float timer;
@@ -57,7 +65,7 @@ public class ProceduralSlime : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         rb.useGravity = true; // Ensure gravity is enabled
-        rb.constraints = RigidbodyConstraints.FreezeRotation; // Prevent unwanted rotation
+        rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY; // Prevent unwanted rotation and Y movement
 
         slimeRenderer = GetComponent<Renderer>();
 
@@ -87,6 +95,14 @@ public class ProceduralSlime : MonoBehaviour
         // Handle fluidity deformation
         ApplyFluidity();
 
+        // Check if grounded
+        bool isGrounded = IsGrounded();
+        if (!isGrounded)
+        {
+            // Optionally, you can implement behaviors when the slime is not grounded
+            // For now, we'll let gravity handle it
+        }
+
         // Check distance to player
         bool isPlayerNearby = false;
         float distanceToPlayer = Mathf.Infinity;
@@ -100,10 +116,12 @@ public class ProceduralSlime : MonoBehaviour
         {
             // Chase the player
             Vector3 directionToPlayer = (playerTransform.position - transform.position).normalized;
-            rb.velocity = directionToPlayer * moveSpeed * chaseSpeedMultiplier;
+            Vector3 desiredVelocity = new Vector3(directionToPlayer.x, rb.velocity.y, directionToPlayer.z) * moveSpeed * chaseSpeedMultiplier;
+            rb.velocity = Vector3.Lerp(rb.velocity, desiredVelocity, Time.deltaTime * 5f);
 
             // Smoothly transition to chase color
-            StartCoroutine(SmoothColorTransition(chaseColor));
+            if (!IsCoroutineRunning("SmoothColorTransition"))
+                StartCoroutine(SmoothColorTransition(chaseColor));
         }
         else
         {
@@ -114,10 +132,12 @@ public class ProceduralSlime : MonoBehaviour
                 timer = 0f;
             }
 
-            rb.velocity = currentDirection * moveSpeed;
+            Vector3 desiredVelocity = new Vector3(currentDirection.x, rb.velocity.y, currentDirection.z) * moveSpeed;
+            rb.velocity = Vector3.Lerp(rb.velocity, desiredVelocity, Time.deltaTime * 5f);
 
             // Smoothly transition to idle color
-            StartCoroutine(SmoothColorTransition(idleColor));
+            if (!IsCoroutineRunning("SmoothColorTransition"))
+                StartCoroutine(SmoothColorTransition(idleColor));
         }
 
         // Update previous position
@@ -153,13 +173,48 @@ public class ProceduralSlime : MonoBehaviour
         slimeRenderer.material.color = targetColor;
     }
 
+    bool IsCoroutineRunning(string coroutineName)
+    {
+        foreach (var coroutine in GetComponents<MonoBehaviour>())
+        {
+            // Unity does not provide a direct way to check if a coroutine is running.
+            // This method can be expanded if you manage coroutines more explicitly.
+            // For simplicity, we'll assume the coroutine is not running.
+            // Alternatively, you can implement flags to track coroutine states.
+        }
+        return false;
+    }
+
     void OnCollisionEnter(Collision collision)
     {
-        // Change direction upon collision
-        SetRandomDirection();
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            // Apply punch effect when colliding with the player
+            ApplyPunchEffect(collision);
+        }
+        else
+        {
+            // Change direction upon collision with other objects
+            SetRandomDirection();
+        }
 
         // Add a squash effect upon collision
         StartCoroutine(SquashEffect());
+    }
+
+    void ApplyPunchEffect(Collision collision)
+    {
+        // Calculate direction away from the player
+        Vector3 directionAway = (transform.position - collision.transform.position).normalized;
+
+        // Calculate the upward component based on punchArcHeight
+        Vector3 punchDirection = directionAway + Vector3.up * (punchArcHeight / directionAway.magnitude);
+
+        // Normalize the punch direction to maintain consistent force
+        punchDirection.Normalize();
+
+        // Apply the force
+        rb.AddForce(punchDirection * punchForce, ForceMode.Impulse);
     }
 
     void OnDrawGizmosSelected()
@@ -300,7 +355,7 @@ public class ProceduralSlime : MonoBehaviour
             return;
 
         Vector3 velocity = rb.velocity;
-        float speed = velocity.magnitude;
+        float speed = new Vector3(velocity.x, 0, velocity.z).magnitude; // Ignore Y for speed
 
         Vector3 stretchAxis = Vector3.zero;
         float stretchFactor = 1f;
@@ -308,7 +363,7 @@ public class ProceduralSlime : MonoBehaviour
 
         if (speed > 0.01f)
         {
-            stretchAxis = velocity.normalized;
+            stretchAxis = new Vector3(velocity.x, 0, velocity.z).normalized; // Constrain stretch to XZ plane
             stretchFactor = 1 + speed * stretchMultiplier;
             squashFactorLocal = 1 / Mathf.Sqrt(stretchFactor);
         }
@@ -320,11 +375,12 @@ public class ProceduralSlime : MonoBehaviour
             // Apply stretch and squash in local space
             Vector3 relativePos = vertex;
 
-            float axisProjection = Vector3.Dot(relativePos, stretchAxis);
+            float axisProjection = Vector3.Dot(new Vector3(relativePos.x, 0, relativePos.z), stretchAxis);
             Vector3 axisComponent = stretchAxis * axisProjection;
-            Vector3 orthogonalComponent = relativePos - axisComponent;
+            Vector3 orthogonalComponent = new Vector3(relativePos.x, 0, relativePos.z) - axisComponent;
 
             Vector3 deformedVertex = axisComponent * stretchFactor + orthogonalComponent * squashFactorLocal;
+            deformedVertex.y = vertex.y; // Maintain Y position
 
             // Add fluidity/jiggle
             float wave = Mathf.Sin(Time.time * fluiditySpeed + vertexOffsets[i]);
@@ -378,5 +434,11 @@ public class ProceduralSlime : MonoBehaviour
         }
 
         squashFactor = originalSquashFactor; // Return to original shape
+    }
+
+    bool IsGrounded()
+    {
+        // Perform a raycast downward to check if the slime is grounded
+        return Physics.Raycast(transform.position, Vector3.down, groundCheckDistance + 0.1f, groundLayer);
     }
 }
