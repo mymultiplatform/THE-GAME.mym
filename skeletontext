@@ -55,5 +55,63 @@ LA BARRERA el juego funciona alrededor de una barrera una clase de muro que divi
 y otra parte del mapa donde la dificultad probablemente suba de nivel X5 limitando al jugador por esa zona y haciendo diferentes missiones para abrir otro acceso que no solo sea 
 la cueva 
 
+Obviam4ente el jefe final se econtratara en esta nueva seccion donde estara la area dfinal igual lleno de plataformeo dificultad moderada y diferentes zonas de exploracion 
+con una tematica mucho mas fuerte.
+
+
+CARACTERISTICAS DEL MAPA GENERATIVO
+SCRIPTING
+
+
+mancha 1 
+craqueadas en el suelo y paredes
+rocas 
+pasto 
+arboles 
+textura de arena roja
+textura de tierra
+textura de roca
+textura de arena 2 de playa 
+arte generativo mancha alternativa 2 
+textura de musgo 
+
+
+NIVEL DE LAVA
+recyclar textura 
+textura de lava
+texturas rojas/narangas
+
+
+EL JUEGO TAMBIEN TIENE DIFERENTES ARMAS Y QUE SON 
+
+bola de fuego 1
+mano zen 2
+orbe zen 3
+macahuitle 4 
+shiva 5
+pistola 6 
+shotgun 7
+granada bola 8
+
+
+tambien el jugador tiene puñetazo 1 y 2 y patada 3 ( tenemos que ver la logica y si es factible agregar melee en este juego )
+
+EL JUEGO TENDRA DIFERENTES VEHICULOS
+
+
+tenia pensado agregar un TREN al juego 
+agregar un CARRO al juego 
+y agregar una HOOVER board al juego 
+
+
+
+
+_____________________________________________________________
+
+
+CREO QUE ESTO ES SUFICIENTE PARA SACAR EL JUEGO EN SU BASE REGULAR Y VER SI SE PUEDE GENERAR MEJORES VERSIONES 
+
+
+
 
 
